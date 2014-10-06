@@ -55,7 +55,7 @@
 // 21 = Elefu Ra Board (v3)
 
 #ifndef MOTHERBOARD
-#define MOTHERBOARD 35
+#define MOTHERBOARD 682
 #endif
 
 // Define this to set a custom name for your generic Mendel,
@@ -81,7 +81,7 @@
 //// The following define selects how to control the laser.  Please choose the one that matches your setup.
 // 1 = Single pin control - LOW when off, HIGH when on, PWM to adjust intensity
 // 2 = Two pin control - A firing pin for which LOW = off, HIGH = on, and a seperate intensity pin which carries a constant PWM signal and adjusts duty cycle to control intensity
-#define LASER_CONTROL 2
+#define LASER_CONTROL 1
 
 //// The following defines select which G codes tell the laser to fire.  It's OK to uncomment more than one.
 #define LASER_FIRE_G1 10 // fire the laser on a G1 move, extinguish when the move ends
@@ -96,8 +96,8 @@
 
 //// Uncomment the following if the laser cutter is equipped with a peripheral relay board
 //// to control power to an exhaust fan, water pump, laser power supply, etc.
-#define LASER_PERIPHERALS
-#define LASER_PERIPHERALS_TIMEOUT 30000  // Number of milliseconds to wait for status signal from peripheral control board
+//#define LASER_PERIPHERALS
+//#define LASER_PERIPHERALS_TIMEOUT 30000  // Number of milliseconds to wait for status signal from peripheral control board
 
 //// Uncomment the following line to enable cubic bezier curve movement with the G5 code
 // #define G5_BEZIER
@@ -343,11 +343,19 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
 //#define Z_MIN_POS 0
 
 // Lansing Makers Netowrk Laser Cutter
-#define X_MAX_POS 531
+//#define X_MAX_POS 531
+//#define X_MIN_POS 0
+//#define Y_MAX_POS 558
+//#define Y_MIN_POS 0
+//#define Z_MAX_POS 95
+//#define Z_MIN_POS 0
+
+// China Town K40 CO2 Laser Engraver/Cutter
+#define X_MAX_POS 400
 #define X_MIN_POS 0
-#define Y_MAX_POS 558
+#define Y_MAX_POS 400
 #define Y_MIN_POS 0
-#define Z_MAX_POS 95
+#define Z_MAX_POS 75
 #define Z_MIN_POS 0
 
 #define X_MAX_LENGTH (X_MAX_POS - X_MIN_POS)
