@@ -194,10 +194,10 @@
 #endif //DUAL_X_CARRIAGE
     
 //homing hits the endstop, then retracts by this distance, before it tries to slowly bump again:
-#define X_HOME_RETRACT_MM 5 
-#define Y_HOME_RETRACT_MM 5 
-#define Z_HOME_RETRACT_MM 1 
-#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
+#define X_HOME_RETRACT_MM 8 
+#define Y_HOME_RETRACT_MM 8 
+#define Z_HOME_RETRACT_MM 4 
+//#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
 
@@ -211,10 +211,10 @@
 
 //default stepper release if idle
 // AMRI Laser cutter
-#define DEFAULT_STEPPER_DEACTIVE_TIME 0
+//#define DEFAULT_STEPPER_DEACTIVE_TIME 0
 
 // LMN Laser cutter
-//#define DEFAULT_STEPPER_DEACTIVE_TIME 60
+#define DEFAULT_STEPPER_DEACTIVE_TIME 1
 
 #define DEFAULT_MINIMUMFEEDRATE       0.0     // minimum feedrate
 #define DEFAULT_MINTRAVELFEEDRATE     0.0
