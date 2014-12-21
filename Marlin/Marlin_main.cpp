@@ -2924,13 +2924,14 @@ void manage_inactivity()
         disable_e0();
         disable_e1();
         disable_e2();
+
         #ifdef LASER
           if (laser.time / 60000 > 0) {
 		    laser.lifetime += laser.time / 60000; // convert to minutes
 		    laser.time = 0;
 		    Config_StoreSettings();
 		  }
-		  laser_init();
+		  //laser_init();
 		#endif // LASER
 		#ifdef LASER_PERIPHERALS
             laser_peripherals_off();
@@ -3012,7 +3013,7 @@ void Stop()
 {
   disable_heater();
 #ifdef LASER
-  if (laser.diagnostics) SERIAL_ECHOLN("Laser set to off, stop() called");
+    SERIAL_ECHOLN("Laser set to off, stop() called");
   laser_extinguish();
 #endif
 #ifdef LASER_PERIPHERALS
