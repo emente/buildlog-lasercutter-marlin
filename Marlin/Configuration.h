@@ -84,14 +84,14 @@
 #define LASER_CONTROL 1
 
 //// The following defines select which G codes tell the laser to fire.  It's OK to uncomment more than one.
-//#define LASER_FIRE_G1 10 // fire the laser on a G1 move, extinguish when the move ends
+#define LASER_FIRE_G1 10 // fire the laser on a G1 move, extinguish when the move ends
 #define LASER_FIRE_SPINDLE 11 // fire the laser on M3, extinguish on M5
 //#define LASER_FIRE_E 12 // fire the laser when the E axis moves
 
 //// Raster mode enables the laser to etch bitmap data at high speeds.  Increases command buffer size substantially.
 #define LASER_RASTER
 #define LASER_MAX_RASTER_LINE 68 // maximum number of base64 encoded pixels per raster gcode command
-#define LASER_RASTER_ASPECT_RATIO 1.33 // pixels aren't square on most displays, 1.33 == 4:3 aspect ratio
+#define LASER_RASTER_ASPECT_RATIO 1 // pixels aren't square on most displays, 1.33 == 4:3 aspect ratio
 #define LASER_RASTER_MM_PER_PULSE 0.2
 
 //// Uncomment the following if the laser cutter is equipped with a peripheral relay board
@@ -375,7 +375,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
 
 //// MOVEMENT SETTINGS
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
-#define HOMING_FEEDRATE {150*60, 85*60, 4*60, 0}  // set the homing speeds (mm/min)
+#define HOMING_FEEDRATE {150*60, 150*60, 4*60, 0}  // set the homing speeds (mm/min)
 
 // default settings
 

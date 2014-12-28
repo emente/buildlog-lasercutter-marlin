@@ -526,9 +526,11 @@ void get_command()
       if(!comment_mode){
         comment_mode = false; //for new command
         fromsd[bufindw] = false;
-        if(strchr(cmdbuffer[bufindw], 'N') != NULL)
+		//mnt: Nxxx (line number) needs to be first char (like pronterface does)
+		//otherwise any string with an N (like base64 data or an lcd message) will throw this routine off
+        if(cmdbuffer[bufindw][0] == 'N') 
         {
-          strchr_pointer = strchr(cmdbuffer[bufindw], 'N');
+          strchr_pointer = cmdbuffer[bufindw];
           gcode_N = (strtol(&cmdbuffer[bufindw][strchr_pointer - cmdbuffer[bufindw] + 1], NULL, 10));
           if(gcode_N != gcode_LastN+1 && (strstr_P(cmdbuffer[bufindw], PSTR("M110")) == NULL) ) {
             SERIAL_ERROR_START;
@@ -540,22 +542,27 @@ void get_command()
             return;
           }
 
-          if(strchr(cmdbuffer[bufindw], '*') != NULL)
+		  //mnt: *xxx checksum must be at end of line or it will not be found
+		  char* starptr = strrchr(cmdbuffer[bufindw], '*');
+          if(starptr != NULL)
           {
-            byte checksum = 0;
-            byte count = 0;
-            while(cmdbuffer[bufindw][count] != '*') checksum = checksum^cmdbuffer[bufindw][count++];
-            strchr_pointer = strchr(cmdbuffer[bufindw], '*');
+			byte starpos = serial_count-(starptr-cmdbuffer[bufindw]);
+			if (starpos>0 && starpos<4)  {
+				byte checksum = 0;
+				byte count = 0;
+				while(cmdbuffer[bufindw][count] != '*') checksum = checksum^cmdbuffer[bufindw][count++];
+				strchr_pointer = strchr(cmdbuffer[bufindw], '*');
 
-            if( (int)(strtod(&cmdbuffer[bufindw][strchr_pointer - cmdbuffer[bufindw] + 1], NULL)) != checksum) {
-              SERIAL_ERROR_START;
-              SERIAL_ERRORPGM(MSG_ERR_CHECKSUM_MISMATCH);
-              SERIAL_ERRORLN(gcode_LastN);
-              FlushSerialRequestResend();
-              serial_count = 0;
-              return;
-            }
-            //if no errors, continue parsing
+				if( (int)(strtod(&cmdbuffer[bufindw][strchr_pointer - cmdbuffer[bufindw] + 1], NULL)) != checksum) {
+				  SERIAL_ERROR_START;
+				  SERIAL_ERRORPGM(MSG_ERR_CHECKSUM_MISMATCH);
+				  SERIAL_ERRORLN(gcode_LastN);
+				  FlushSerialRequestResend();
+				  serial_count = 0;
+				  return;
+				}
+				//if no errors, continue parsing
+			}
           }
           else
           {
@@ -572,14 +579,18 @@ void get_command()
         }
         else  // if we don't receive 'N' but still see '*'
         {
-          if((strchr(cmdbuffer[bufindw], '*') != NULL))
+		  char* starptr = strrchr(cmdbuffer[bufindw], '*');
+          if(starptr != NULL)
           {
-            SERIAL_ERROR_START;
-            SERIAL_ERRORPGM(MSG_ERR_NO_LINENUMBER_WITH_CHECKSUM);
-            SERIAL_ERRORLN(gcode_LastN);
-            serial_count = 0;
-            return;
-          }
+			byte starpos = serial_count-(starptr-cmdbuffer[bufindw]);
+			if (starpos>0 && starpos<4)  {
+				SERIAL_ERROR_START;
+				SERIAL_ERRORPGM(MSG_ERR_NO_LINENUMBER_WITH_CHECKSUM);
+				SERIAL_ERRORLN(gcode_LastN);
+				serial_count = 0;
+				return;
+			}
+		  }
         }
         if((strchr(cmdbuffer[bufindw], 'G') != NULL)){
           strchr_pointer = strchr(cmdbuffer[bufindw], 'G');
@@ -834,7 +845,7 @@ static void homeaxis(int axis) {
 		feedrate = homing_feedrate[axis]/2 ;
 	  #endif
 
-      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
+      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/200, active_extruder);
       #endif // MUVE_Z_PEEL
 
       st_synchronize();
@@ -861,6 +872,27 @@ static void homeaxis(int axis) {
   }
 }
 #define HOMEAXIS(LETTER) homeaxis(LETTER##_AXIS)
+
+uint8_t hex_decode_nibble(char p) {
+    if (p>='0' && p<='9') {
+         return p-'0';   
+    }
+    if (p>='A' && p<='F') {
+         return p-'A'+10;   
+    }
+    if (p>='a' && p<='f') {
+         return p-'a'+10;   
+    }
+    return 0;
+}
+
+int hex_decode(char *output, char *input, int inputLen) {
+	for (int i = 0; i < (inputLen / 2); i++)  {
+	    uint8_t b=hex_decode_nibble(input[(i*2)+1])+(16*hex_decode_nibble(input[i*2]));
+            output[i]=b;
+	}
+	return inputLen / 2;
+}
 
 void process_commands()
 {
@@ -907,13 +939,47 @@ void process_commands()
     case 2: // G2  - CW ARC
       if(Stopped == false) {
         get_arc_coordinates();
+		
+        #ifdef LASER_FIRE_G1
+          if (code_seen('S') && !IsStopped()) laser.intensity = (float) code_value();
+          if (code_seen('L') && !IsStopped()) laser.duration = (unsigned long) labs(code_value());
+          if (code_seen('P') && !IsStopped()) laser.ppm = (float) code_value();
+          if (code_seen('D') && !IsStopped()) laser.diagnostics = (bool) code_value();
+          if (code_seen('B') && !IsStopped()) laser_set_mode((int) code_value());
+
+          laser.status = LASER_ON;
+          laser.fired = LASER_FIRE_G1;
+        #endif // LASER_FIRE_G1
+		
         prepare_arc_move(true);
+		
+        #ifdef LASER_FIRE_G1
+          laser.status = LASER_OFF;
+        #endif // LASER_FIRE_G1
+		
         return;
       }
     case 3: // G3  - CCW ARC
       if(Stopped == false) {
         get_arc_coordinates();
+		
+        #ifdef LASER_FIRE_G1
+          if (code_seen('S') && !IsStopped()) laser.intensity = (float) code_value();
+          if (code_seen('L') && !IsStopped()) laser.duration = (unsigned long) labs(code_value());
+          if (code_seen('P') && !IsStopped()) laser.ppm = (float) code_value();
+          if (code_seen('D') && !IsStopped()) laser.diagnostics = (bool) code_value();
+          if (code_seen('B') && !IsStopped()) laser_set_mode((int) code_value());
+
+          laser.status = LASER_ON;
+          laser.fired = LASER_FIRE_G1;
+        #endif // LASER_FIRE_G1
+		
         prepare_arc_move(false);
+		
+        #ifdef LASER_FIRE_G1
+          laser.status = LASER_OFF;
+        #endif // LASER_FIRE_G1
+		
         return;
       }
     case 4: // G4 dwell
@@ -1032,36 +1098,6 @@ void process_commands()
 	  previous_millis_cmd = millis();
 	  break;
 	#endif // G5_BEZIER
-    #ifdef LASER_RASTER
-    case 7: //G7 Execute raster line
-      if (code_seen('L')) laser.raster_raw_length = int(code_value());
-	  if (code_seen('N')) {
-		laser.raster_direction = (bool)code_value();
-		destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
-	  }
-      if (code_seen('D')) laser.raster_num_pixels = base64_decode(laser.raster_data, &cmdbuffer[bufindr][strchr_pointer - cmdbuffer[bufindr] + 1], laser.raster_raw_length);
-	  if (!laser.raster_direction) {
-	    destination[X_AXIS] = current_position[X_AXIS] - (laser.raster_mm_per_pulse * laser.raster_num_pixels);
-	    if (laser.diagnostics) {
-          SERIAL_ECHO_START;
-          SERIAL_ECHOLN("Negative Raster Line");
-        }
-	  } else {
-	    destination[X_AXIS] = current_position[X_AXIS] + (laser.raster_mm_per_pulse * laser.raster_num_pixels);
-	    if (laser.diagnostics) {
-          SERIAL_ECHO_START;
-          SERIAL_ECHOLN("Positive Raster Line");
-        }
-	  }
-	  laser.ppm = 1 / laser.raster_mm_per_pulse;
-	  laser.duration = labs(1 / (feedrate * laser.ppm) * 1000000);
-	  laser.mode = RASTER;
-	  laser.status = LASER_ON;
-	  laser.fired = RASTER;
-	  prepare_move();
-
-      break;
-	#endif // LASER_RASTER
 
     #ifdef FWRETRACT
     case 10: // G10 retract
@@ -1326,6 +1362,51 @@ void process_commands()
 	  prepare_move();
       break;
 #endif // LASER_FIRE_SPINDLE
+
+//mnt: changed G7 to M7 or pronterface will fuckup
+    #ifdef LASER_RASTER
+    case 7: //M7 Execute raster line
+      if (code_seen('L')) {
+		laser.raster_raw_length = int(code_value());
+		strchr_pointer = strchr(cmdbuffer[bufindr], 'D');
+                if (strchr_pointer) {
+        		laser.raster_num_pixels = hex_decode(laser.raster_data, &cmdbuffer[bufindr][strchr_pointer - cmdbuffer[bufindr] + 1], laser.raster_raw_length);
+                }
+	}
+	  
+	  if (code_seen('A')) {
+		laser.raster_direction = (bool)code_value();
+		destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
+	    if (laser.diagnostics) {
+		SERIAL_ECHO_START;
+		SERIAL_ECHOLN("position increment");
+		SERIAL_ECHOLN((laser.raster_mm_per_pulse * laser.raster_aspect_ratio));
+            }
+	  }
+	  if (!laser.raster_direction) {
+	    destination[X_AXIS] = current_position[X_AXIS] - (laser.raster_mm_per_pulse * laser.raster_num_pixels);
+	    if (laser.diagnostics) {
+          SERIAL_ECHO_START;
+          SERIAL_ECHOLN("Negative Raster Line");
+        }
+	  } else {
+	    destination[X_AXIS] = current_position[X_AXIS] + (laser.raster_mm_per_pulse * laser.raster_num_pixels);
+	    if (laser.diagnostics) {
+          SERIAL_ECHO_START;
+          SERIAL_ECHOLN("Positive Raster Line");
+        }
+	  }
+	  laser.ppm = 1 / laser.raster_mm_per_pulse;
+	  laser.duration = labs(1 / (feedrate * laser.ppm) * 1000000);
+	  laser.mode = RASTER;
+	  laser.status = LASER_ON;
+	  laser.fired = RASTER;
+	  prepare_move();
+
+      break;
+	#endif // LASER_RASTER
+
+
     case 17:
         LCD_MESSAGEPGM(MSG_NO_MOVE);
         enable_x();
@@ -1375,7 +1456,7 @@ void process_commands()
     case 28: //M28 - Start SD write
       starpos = (strchr(strchr_pointer + 4,'*'));
       if(starpos != NULL){
-        char* npos = strchr(cmdbuffer[bufindr], 'N');
+        char* npos = strchr(cmdbuffer[bufindr], 'N''N');
         strchr_pointer = strchr(npos,' ') + 1;
         *(starpos-1) = '\0';
       }

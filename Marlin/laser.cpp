@@ -130,6 +130,8 @@ void laser_fire(int intensity = 100.0){
 void laser_extinguish(){
 	if (laser.firing == LASER_ON) {
 	  laser.firing = LASER_OFF;
+          laser.duration=0;
+          laser.intensity =0;
 	  
 	  // Engage the pullup resistor for TTL laser controllers which don't turn off entirely without it.
 	  digitalWrite(LASER_FIRING_PIN, LOW);
