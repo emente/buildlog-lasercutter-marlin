@@ -906,6 +906,11 @@ void process_commands()
     case 0: // G0
       if(Stopped == false) {
         get_coordinates(); // For X Y Z E F
+        
+        #ifdef LASER_FIRE_G1
+          laser.status = LASER_OFF;
+        #endif // LASER_FIRE_G1
+        
         prepare_move();
         //ClearToSend();
         return;

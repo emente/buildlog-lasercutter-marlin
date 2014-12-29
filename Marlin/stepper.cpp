@@ -324,11 +324,8 @@ ISR(TIMER1_COMPA_vect)
 {
   #ifdef LASER
   if (laser.dur != 0 && (laser.last_firing + laser.dur < micros())) {
-    if (laser.diagnostics)
-	 if (laser.firing == LASER_ON) {
-		SERIAL_ECHOLN("Laser firing duration elapsed, in interrupt handler");
-		laser_extinguish();
-	}
+    if (laser.diagnostics) SERIAL_ECHOLN("Laser firing duration elapsed, in interrupt handler");
+	laser_extinguish();
   }
   #endif LASER
 	
@@ -385,11 +382,8 @@ ISR(TIMER1_COMPA_vect)
 	  laser_fire(current_block->laser_intensity);
     }
     if (current_block->laser_status == LASER_OFF) {
-      if (laser.diagnostics)
-		if (laser.firing == LASER_ON) {
-			SERIAL_ECHOLN("Laser status set to off, in interrupt handler");
-			laser_extinguish();
-		}
+      if (laser.diagnostics) SERIAL_ECHOLN("Laser status set to off, in interrupt handler");
+      laser_extinguish();
     }
     #endif // LASER
 
@@ -676,22 +670,21 @@ ISR(TIMER1_COMPA_vect)
 			}
 			#ifdef LASER_RASTER
 			if (current_block->laser_mode == RASTER && current_block->laser_status == LASER_ON) { // Raster Firing Mode
-                int i=((uint8_t)current_block->laser_raster_data[counter_raster])/255.0*100.0;
+			
+			  int i=((uint8_t)current_block->laser_raster_data[counter_raster])/255.0*100.0;
 			  laser_fire(i);
-			  if (laser.diagnostics) 
+
+			  if (laser.diagnostics) {
 			    SERIAL_ECHOPAIR("Pixel: ", (float)i);
-//MYSERIAL.println(i,DEC);
+		      }
 		      counter_raster++;
 			}
 			#endif // LASER_RASTER
 		  counter_l -= current_block->step_event_count;
 		  }
 		  if (current_block->laser_duration != 0 && (laser.last_firing + current_block->laser_duration < micros())) {
-			if (laser.diagnostics)
-			if (laser.firing == LASER_ON) {
-				SERIAL_ECHOLN("Laser firing duration elapsed, in interrupt fast loop");
-				laser_extinguish();
-			}
+			if (laser.diagnostics) SERIAL_ECHOLN("Laser firing duration elapsed, in interrupt fast loop");
+		    laser_extinguish();
 		  }
       #endif // LASER
 
