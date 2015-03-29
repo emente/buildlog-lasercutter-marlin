@@ -40,10 +40,6 @@
 #include "language.h"
 #include "pins_arduino.h"
 
-#ifdef LASER_RASTER
-#include "Base64.h"
-#endif // LASER_RASTER
-
 #if NUM_SERVOS > 0
 #include "Servo.h"
 #endif
@@ -829,13 +825,13 @@ static void homeaxis(int axis) {
       plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
       destination[axis] = 1.5 * max_length(axis) * axis_home_dir;
       feedrate = homing_feedrate[axis];
-      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
+      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/80, active_extruder);
       st_synchronize();
 
       current_position[axis] = 0;
       plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
       destination[axis] = -home_retract_mm(axis) * axis_home_dir;
-      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
+      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/80, active_extruder);
       st_synchronize();
 
       destination[axis] = 2*home_retract_mm(axis) * axis_home_dir;
@@ -1104,6 +1100,62 @@ void process_commands()
 	  break;
 	#endif // G5_BEZIER
 
+	
+    #ifdef LASER_RASTER
+    case 7: //G7 Execute raster line
+      laser.diagnostics = false;
+
+      if (code_seen('L')) {
+		laser.raster_raw_length = int(code_value());
+		strchr_pointer = strchr(cmdbuffer[bufindr], 'D');
+                if (strchr_pointer) {
+        		laser.raster_num_pixels = hex_decode(laser.raster_data, &cmdbuffer[bufindr][strchr_pointer - cmdbuffer[bufindr] + 1], laser.raster_raw_length);
+                }
+                if (laser.diagnostics) {
+					SERIAL_ECHO_START;
+                    SERIAL_ECHO("raw data length=");
+                    SERIAL_ECHO(laser.raster_raw_length);
+                    SERIAL_ECHO(" num pixels=");
+                    SERIAL_ECHOLN(laser.raster_num_pixels);
+                }
+	}
+	  
+	  if (code_seen('A')) {
+		laser.raster_direction = (bool)code_value();
+		destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
+	        if (laser.diagnostics) {
+		    SERIAL_ECHO_START;
+                    SERIAL_ECHOLN("position increment");
+    	            SERIAL_ECHOLN((laser.raster_mm_per_pulse * laser.raster_aspect_ratio));
+                }
+	  }
+	  if (!laser.raster_direction) {
+                destination[X_AXIS] = current_position[X_AXIS] - (laser.raster_mm_per_pulse * laser.raster_num_pixels);
+        	if (laser.diagnostics) {
+                    SERIAL_ECHO_START;
+                    SERIAL_ECHOLN("Negative Raster Line");
+                }
+	  } else {
+	        destination[X_AXIS] = current_position[X_AXIS] + (laser.raster_mm_per_pulse * laser.raster_num_pixels);
+	        if (laser.diagnostics) {
+                    SERIAL_ECHO_START;
+                    SERIAL_ECHOLN("Positive Raster Line");
+                }
+	  }
+//ppm5 feedrate3000
+	  laser.ppm = 1 / laser.raster_mm_per_pulse;
+	  laser.duration = labs(10000000 / feedrate);
+//	  SERIAL_ECHOPAIR("duration",laser.duration);
+	  laser.mode = RASTER;
+	  laser.status = LASER_ON;
+	  laser.fired = RASTER;
+	  prepare_move();
+
+      break;
+	#endif // LASER_RASTER
+	
+	
+	
     #ifdef FWRETRACT
     case 10: // G10 retract
       if(!retracted)
@@ -1367,50 +1419,6 @@ void process_commands()
 	  prepare_move();
       break;
 #endif // LASER_FIRE_SPINDLE
-
-//mnt: changed G7 to M7 or pronterface will fuckup
-    #ifdef LASER_RASTER
-    case 7: //M7 Execute raster line
-      if (code_seen('L')) {
-		laser.raster_raw_length = int(code_value());
-		strchr_pointer = strchr(cmdbuffer[bufindr], 'D');
-                if (strchr_pointer) {
-        		laser.raster_num_pixels = hex_decode(laser.raster_data, &cmdbuffer[bufindr][strchr_pointer - cmdbuffer[bufindr] + 1], laser.raster_raw_length);
-                }
-	}
-	  
-	  if (code_seen('A')) {
-		laser.raster_direction = (bool)code_value();
-		destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
-	    if (laser.diagnostics) {
-		SERIAL_ECHO_START;
-		SERIAL_ECHOLN("position increment");
-		SERIAL_ECHOLN((laser.raster_mm_per_pulse * laser.raster_aspect_ratio));
-            }
-	  }
-	  if (!laser.raster_direction) {
-	    destination[X_AXIS] = current_position[X_AXIS] - (laser.raster_mm_per_pulse * laser.raster_num_pixels);
-	    if (laser.diagnostics) {
-          SERIAL_ECHO_START;
-          SERIAL_ECHOLN("Negative Raster Line");
-        }
-	  } else {
-	    destination[X_AXIS] = current_position[X_AXIS] + (laser.raster_mm_per_pulse * laser.raster_num_pixels);
-	    if (laser.diagnostics) {
-          SERIAL_ECHO_START;
-          SERIAL_ECHOLN("Positive Raster Line");
-        }
-	  }
-	  laser.ppm = 1 / laser.raster_mm_per_pulse;
-	  laser.duration = labs(1 / (feedrate * laser.ppm) * 1000000);
-	  laser.mode = RASTER;
-	  laser.status = LASER_ON;
-	  laser.fired = RASTER;
-	  prepare_move();
-
-      break;
-	#endif // LASER_RASTER
-
 
     case 17:
         LCD_MESSAGEPGM(MSG_NO_MOVE);

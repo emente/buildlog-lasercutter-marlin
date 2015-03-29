@@ -57,8 +57,8 @@
 //This is for controlling a fan to cool down the stepper drivers
 //it will turn on when any driver is enabled
 //and turn off after the set amount of seconds from last driver being disabled again
-#define CONTROLLERFAN_PIN 50 //Pin used for the fan to cool controller (-1 to disable)
-#define CONTROLLERFAN_SECS 10 //How many seconds, after all motors were disabled, the fan should run
+#define CONTROLLERFAN_PIN -1 //Pin used for the fan to cool controller (-1 to disable)
+#define CONTROLLERFAN_SECS 3 //How many seconds, after all motors were disabled, the fan should run
 #define CONTROLLERFAN_SPEED 255  // == full speed
 
 // When first starting the main fan, run it at full speed for the
@@ -97,7 +97,7 @@
     #ifdef BED_CENTER_AT_0_0
       #define X_HOME_POS X_MAX_LENGTH * -0.5
     #else
-      #define X_HOME_POS X_MIN_POS
+      #define X_HOME_POS -15
     #endif //BED_CENTER_AT_0_0
   #else    
     #ifdef BED_CENTER_AT_0_0
@@ -201,7 +201,7 @@
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
 
-#define MAX_STEP_FREQUENCY 40000 // Max step frequency for Ultimaker (5000 pps / half step)
+#define MAX_STEP_FREQUENCY 30000 // Max step frequency for Ultimaker (5000 pps / half step)
 
 //By default pololu step drivers require an active high signal. However, some high power drivers require an active low signal as step.
 #define INVERT_X_STEP_PIN false
@@ -211,10 +211,10 @@
 
 //default stepper release if idle
 // AMRI Laser cutter
-//#define DEFAULT_STEPPER_DEACTIVE_TIME 0
+#define DEFAULT_STEPPER_DEACTIVE_TIME 0
 
 // LMN Laser cutter
-#define DEFAULT_STEPPER_DEACTIVE_TIME 1
+//#define DEFAULT_STEPPER_DEACTIVE_TIME 1
 
 #define DEFAULT_MINIMUMFEEDRATE       0.0     // minimum feedrate
 #define DEFAULT_MINTRAVELFEEDRATE     0.0

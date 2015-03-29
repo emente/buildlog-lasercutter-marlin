@@ -116,16 +116,21 @@ void laser_fire(int intensity = 100.0){
 	if (intensity > 100.0) intensity = 100.0; // restrict intensity between 0 and 100
 	if (intensity < 0) intensity = 0;
 
+    int power=labs(intensity*2.55);
+
     pinMode(LASER_FIRING_PIN, OUTPUT);
 	#if LASER_CONTROL == 1
-	  analogWrite(LASER_FIRING_PIN, labs(intensity*2.55));
+	  analogWrite(LASER_FIRING_PIN, power);
     #endif
 	#if LASER_CONTROL == 2
-      analogWrite(LASER_INTENSITY_PIN, 255-labs(intensity*2.55));
+      analogWrite(LASER_INTENSITY_PIN, 255-power);
       digitalWrite(LASER_FIRING_PIN, LOW);
     #endif
 
-	if (laser.diagnostics)SERIAL_ECHOLN("Laser fired");
+	if (laser.diagnostics){
+            SERIAL_ECHO("Laser fired=");
+            SERIAL_ECHOLN(power);
+        }
 }
 void laser_extinguish(){
 	if (laser.firing != LASER_OFF) {
