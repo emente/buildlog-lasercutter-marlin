@@ -917,6 +917,8 @@ void process_commands()
         get_coordinates(); // For X Y Z E F
 
         #ifdef LASER_FIRE_G1
+          laser.mode = CONTINUOUS;
+
           if (code_seen('S') && !IsStopped()) laser.intensity = (float) code_value();
           if (code_seen('L') && !IsStopped()) laser.duration = (unsigned long) labs(code_value());
           if (code_seen('P') && !IsStopped()) laser.ppm = (float) code_value();
@@ -1105,6 +1107,16 @@ void process_commands()
     case 7: //G7 Execute raster line
       laser.diagnostics = false;
 
+    if (code_seen('R')) {
+        laser.raster_mm_per_pulse = 1/code_value();
+    }
+    if(code_seen('F')) {
+        next_feedrate = code_value();
+        if(next_feedrate > 0.0) feedrate = next_feedrate;
+    }    
+
+      if (code_seen('L') || code_seen('A')) {
+
       if (code_seen('L')) {
 		laser.raster_raw_length = int(code_value());
 		strchr_pointer = strchr(cmdbuffer[bufindr], 'D');
@@ -1118,12 +1130,12 @@ void process_commands()
                     SERIAL_ECHO(" num pixels=");
                     SERIAL_ECHOLN(laser.raster_num_pixels);
                 }
-	}
+      }
 	  
 	  if (code_seen('A')) {
 		laser.raster_direction = (bool)code_value();
-		destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
-	        if (laser.diagnostics) {
+        destination[Y_AXIS] = current_position[Y_AXIS] + (laser.raster_mm_per_pulse * laser.raster_aspect_ratio); // increment Y axis
+        if (laser.diagnostics) {
 		    SERIAL_ECHO_START;
                     SERIAL_ECHOLN("position increment");
     	            SERIAL_ECHOLN((laser.raster_mm_per_pulse * laser.raster_aspect_ratio));
@@ -1150,7 +1162,8 @@ void process_commands()
 	  laser.status = LASER_ON;
 	  laser.fired = RASTER;
 	  prepare_move();
-
+      }
+      
       break;
 	#endif // LASER_RASTER
 	
@@ -1404,6 +1417,8 @@ void process_commands()
 #endif
 #ifdef LASER_FIRE_SPINDLE
     case 3:  //M3 - fire laser
+      laser.mode = CONTINUOUS;
+
       if (code_seen('S') && !IsStopped()) laser.intensity = (float) code_value();
       if (code_seen('L') && !IsStopped()) laser.duration = (unsigned long) labs(code_value());
       if (code_seen('P') && !IsStopped()) laser.ppm = (float) code_value();
